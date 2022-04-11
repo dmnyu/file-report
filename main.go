@@ -1,24 +1,25 @@
 package main
 
 import (
+	"bufio"
+	"errors"
 	"flag"
 	"fmt"
+	"github.com/nyudlts/bytemath"
+	"io/fs"
+	"os"
+	"path/filepath"
+	"sort"
+	"strings"
 )
-import "path/filepath"
-import "os"
-import "io/fs"
-import "strings"
-import "bufio"
-import "github.com/nyudlts/bytemath"
-import "sort"
 
 var (
-	exts     map[string]int64
-	inputDir string
+	extensions map[string]int64
+	inputDir   string
 )
 
 func contains(ext string) bool {
-	for k, _ := range exts {
+	for k, _ := range extensions {
 		if k == ext {
 			return true
 		}
@@ -38,9 +39,10 @@ func (p PairList) Less(i, j int) bool { return p[i].Value < p[j].Value }
 func (p PairList) Swap(i, j int)      { p[i], p[j] = p[j], p[i] }
 
 func init() {
-	exts = make(map[string]int64)
+	extensions = make(map[string]int64)
 	flag.StringVar(&inputDir, "dir", "", "The Directory to walk")
 }
+
 func rankByWordCount(wordFrequencies map[string]int64) PairList {
 	pl := make(PairList, len(wordFrequencies))
 	i := 0
@@ -52,8 +54,28 @@ func rankByWordCount(wordFrequencies map[string]int64) PairList {
 	return pl
 }
 
+func RootExists() error {
+	fi, err := os.Stat(inputDir)
+	if err == nil {
+
+	} else if errors.Is(err, os.ErrNotExist) {
+		return fmt.Errorf("%s does not exist", inputDir)
+
+	} else {
+		return err
+	}
+
+	if fi.IsDir() != true {
+		return fmt.Errorf("input location is not a direcotory")
+	}
+	return nil
+}
+
 func main() {
 	flag.Parse()
+	if err := RootExists(); err != nil {
+		panic(err)
+	}
 
 	err := filepath.Walk(inputDir, func(path string, info fs.FileInfo, err error) error {
 		if info.IsDir() {
@@ -61,9 +83,9 @@ func main() {
 		} else {
 			ext := strings.ToLower(filepath.Ext(info.Name()))
 			if contains(ext) != true {
-				exts[ext] = info.Size()
+				extensions[ext] = info.Size()
 			} else {
-				exts[ext] = exts[ext] + info.Size()
+				extensions[ext] = extensions[ext] + info.Size()
 			}
 		}
 
@@ -74,18 +96,18 @@ func main() {
 		fmt.Println(err.Error())
 	}
 
-	sortedExts := rankByWordCount(exts)
+	sortedExtensions := rankByWordCount(extensions)
 
 	of, _ := os.Create("ayers.tsv")
 	defer of.Close()
 	writer := bufio.NewWriter(of)
 
-	for _, entry := range sortedExts {
+	for _, entry := range sortedExtensions {
 		if entry.Value > 0 {
-			//fmt.Printf("%s\t%d\n", k,v)
 			size := bytemath.ConvertToHumanReadable(float64(entry.Value))
 			writer.WriteString(fmt.Sprintf("%s\t%s\n", entry.Key, size))
 			writer.Flush()
 		}
 	}
+
 }
