@@ -78,11 +78,15 @@ func RootExists() error {
 }
 
 func main() {
+	//parse the flags
 	flag.Parse()
+
+	//check that the directory exists and is a directory
 	if err := RootExists(); err != nil {
 		panic(err)
 	}
 
+	//walk the directory
 	err := filepath.Walk(inputDir, func(path string, info fs.FileInfo, err error) error {
 		if info.IsDir() {
 			//fmt.Printf("Checking: %s\n", info.Name())
@@ -101,16 +105,22 @@ func main() {
 		return nil
 	})
 
+	//check for any errors during walk
 	if err != nil {
 		fmt.Println(err.Error())
 	}
 
+	//sort by size of files
 	sortedExtensions := rankByWordCount(extensions)
 
+	//create tsv file to write report to
 	of, _ := os.Create("file-report.tsv")
 	defer of.Close()
 	writer := bufio.NewWriter(of)
+	writer.WriteString("Extension\tSize\tCount\tSize In Bytes\n")
+	writer.Flush()
 
+	//create the output tsv
 	for _, entry := range sortedExtensions {
 		if entry.Value.Size > 0 {
 			size := bytemath.ConvertToHumanReadable(float64(entry.Value.Size))
