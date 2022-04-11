@@ -18,65 +18,13 @@ const version = "1.0.0"
 var (
 	extensions map[string]Extension
 	inputDir   string
+	outputFile string
 )
-
-type Pair struct {
-	Key   string
-	Value Extension
-}
-
-type PairList []Pair
-
-func (p PairList) Len() int           { return len(p) }
-func (p PairList) Less(i, j int) bool { return p[i].Value.Size < p[j].Value.Size }
-func (p PairList) Swap(i, j int)      { p[i], p[j] = p[j], p[i] }
 
 func init() {
 	extensions = make(map[string]Extension)
-	flag.StringVar(&inputDir, "dir", "", "The Directory to walk")
-}
-
-type Extension struct {
-	Name  string
-	Count int
-	Size  int64
-}
-
-func contains(ext string) bool {
-	for k, _ := range extensions {
-		if k == ext {
-			return true
-		}
-	}
-	return false
-}
-
-func rankByWordCount(wordFrequencies map[string]Extension) PairList {
-	pl := make(PairList, len(wordFrequencies))
-	i := 0
-	for k, v := range wordFrequencies {
-		pl[i] = Pair{k, v}
-		i++
-	}
-	sort.Sort(sort.Reverse(pl))
-	return pl
-}
-
-func RootExists() error {
-	fi, err := os.Stat(inputDir)
-	if err == nil {
-
-	} else if errors.Is(err, os.ErrNotExist) {
-		return fmt.Errorf("%s does not exist", inputDir)
-
-	} else {
-		return err
-	}
-
-	if fi.IsDir() != true {
-		return fmt.Errorf("input location is not a direcotory")
-	}
-	return nil
+	flag.StringVar(&inputDir, "inputDir", "", "The Directory to walk")
+	flag.StringVar(&outputFile, "outputFile", "file-report.tsv", "/path/to/output/file")
 }
 
 func main() {
@@ -88,7 +36,7 @@ func main() {
 
 	fmt.Printf("* Checking that %s exists and is a directory\n", inputDir)
 	//check that the directory exists and is a directory
-	if err := RootExists(); err != nil {
+	if err := rootExists(); err != nil {
 		panic(err)
 	}
 
@@ -122,7 +70,7 @@ func main() {
 
 	fmt.Printf("* Creating output tsv file\n")
 	//create tsv file to write report to
-	of, _ := os.Create("file-report.tsv")
+	of, _ := os.Create(outputFile)
 	defer of.Close()
 	writer := bufio.NewWriter(of)
 	writer.WriteString("Extension\tSize\tCount\tSize In Bytes\n")
@@ -148,4 +96,60 @@ func main() {
 	fmt.Printf("  total size of files %s\n", bytemath.ConvertToHumanReadable(float64(totalSize)))
 	fmt.Printf("\nExiting\n")
 	os.Exit(0)
+}
+
+// support types and functions
+
+type Extension struct {
+	Name  string
+	Count int
+	Size  int64
+}
+
+type Pair struct {
+	Key   string
+	Value Extension
+}
+
+type PairList []Pair
+
+func (p PairList) Len() int           { return len(p) }
+func (p PairList) Less(i, j int) bool { return p[i].Value.Size < p[j].Value.Size }
+func (p PairList) Swap(i, j int)      { p[i], p[j] = p[j], p[i] }
+
+func rootExists() error {
+	fi, err := os.Stat(inputDir)
+	if err == nil {
+
+	} else if errors.Is(err, os.ErrNotExist) {
+		return fmt.Errorf("%s does not exist", inputDir)
+
+	} else {
+		return err
+	}
+
+	if fi.IsDir() != true {
+		return fmt.Errorf("input location is not a direcotory")
+	}
+	return nil
+}
+
+func contains(ext string) bool {
+	for k, _ := range extensions {
+		if k == ext {
+			return true
+		}
+	}
+	return false
+}
+
+func rankByWordCount(wordFrequencies map[string]Extension) PairList {
+	pl := make(PairList, len(wordFrequencies))
+	i := 0
+	for k, v := range wordFrequencies {
+		pl[i] = Pair{k, v}
+		i++
+	}
+	sort.Sort(sort.Reverse(pl))
+	return pl
 }
