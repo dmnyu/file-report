@@ -1,6 +1,9 @@
 package main
 
-import "fmt"
+import (
+	"flag"
+	"fmt"
+)
 import "path/filepath"
 import "os"
 import "io/fs"
@@ -9,7 +12,10 @@ import "bufio"
 import "github.com/nyudlts/bytemath"
 import "sort"
 
-var exts map[string]int64
+var (
+	exts     map[string]int64
+	inputDir string
+)
 
 func contains(ext string) bool {
 	for k, _ := range exts {
@@ -31,6 +37,10 @@ func (p PairList) Len() int           { return len(p) }
 func (p PairList) Less(i, j int) bool { return p[i].Value < p[j].Value }
 func (p PairList) Swap(i, j int)      { p[i], p[j] = p[j], p[i] }
 
+func init() {
+	exts = make(map[string]int64)
+	flag.StringVar(&inputDir, "dir", "", "The Directory to walk")
+}
 func rankByWordCount(wordFrequencies map[string]int64) PairList {
 	pl := make(PairList, len(wordFrequencies))
 	i := 0
@@ -43,8 +53,8 @@ func rankByWordCount(wordFrequencies map[string]int64) PairList {
 }
 
 func main() {
-	exts = make(map[string]int64)
-	inputDir := "/mnt/ACMBornDigital/Collections/fa/mss/610/"
+	flag.Parse()
+
 	err := filepath.Walk(inputDir, func(path string, info fs.FileInfo, err error) error {
 		if info.IsDir() {
 			//fmt.Printf("Checking: %s\n", info.Name())
