@@ -107,14 +107,14 @@ func main() {
 
 	sortedExtensions := rankByWordCount(extensions)
 
-	of, _ := os.Create("ayers.tsv")
+	of, _ := os.Create("file-report.tsv")
 	defer of.Close()
 	writer := bufio.NewWriter(of)
 
 	for _, entry := range sortedExtensions {
 		if entry.Value.Size > 0 {
 			size := bytemath.ConvertToHumanReadable(float64(entry.Value.Size))
-			writer.WriteString(fmt.Sprintf("%s\t%s\t%d\n", entry.Value.Name, size, entry.Value.Count))
+			writer.WriteString(fmt.Sprintf("%s\t%s\t%d\t%d\n", entry.Value.Name, size, entry.Value.Count, entry.Value.Size))
 			writer.Flush()
 		}
 	}
