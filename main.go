@@ -14,9 +14,31 @@ import (
 )
 
 var (
-	extensions map[string]int64
+	extensions map[string]Extension
 	inputDir   string
 )
+
+type Pair struct {
+	Key   string
+	Value Extension
+}
+
+type PairList []Pair
+
+func (p PairList) Len() int           { return len(p) }
+func (p PairList) Less(i, j int) bool { return p[i].Value.Size < p[j].Value.Size }
+func (p PairList) Swap(i, j int)      { p[i], p[j] = p[j], p[i] }
+
+func init() {
+	extensions = make(map[string]Extension)
+	flag.StringVar(&inputDir, "dir", "", "The Directory to walk")
+}
+
+type Extension struct {
+	Name  string
+	Count int
+	Size  int64
+}
 
 func contains(ext string) bool {
 	for k, _ := range extensions {
@@ -27,23 +49,7 @@ func contains(ext string) bool {
 	return false
 }
 
-type Pair struct {
-	Key   string
-	Value int64
-}
-
-type PairList []Pair
-
-func (p PairList) Len() int           { return len(p) }
-func (p PairList) Less(i, j int) bool { return p[i].Value < p[j].Value }
-func (p PairList) Swap(i, j int)      { p[i], p[j] = p[j], p[i] }
-
-func init() {
-	extensions = make(map[string]int64)
-	flag.StringVar(&inputDir, "dir", "", "The Directory to walk")
-}
-
-func rankByWordCount(wordFrequencies map[string]int64) PairList {
+func rankByWordCount(wordFrequencies map[string]Extension) PairList {
 	pl := make(PairList, len(wordFrequencies))
 	i := 0
 	for k, v := range wordFrequencies {
@@ -81,11 +87,14 @@ func main() {
 		if info.IsDir() {
 			//fmt.Printf("Checking: %s\n", info.Name())
 		} else {
-			ext := strings.ToLower(filepath.Ext(info.Name()))
-			if contains(ext) != true {
-				extensions[ext] = info.Size()
+			extension := strings.ToLower(filepath.Ext(info.Name()))
+			if contains(extension) != true {
+				extensions[extension] = Extension{Name: extension, Size: info.Size(), Count: 1}
 			} else {
-				extensions[ext] = extensions[ext] + info.Size()
+				tmpExt := extensions[extension]
+				tmpExt.Count += 1
+				tmpExt.Size += info.Size()
+				extensions[extension] = tmpExt
 			}
 		}
 
@@ -103,9 +112,9 @@ func main() {
 	writer := bufio.NewWriter(of)
 
 	for _, entry := range sortedExtensions {
-		if entry.Value > 0 {
-			size := bytemath.ConvertToHumanReadable(float64(entry.Value))
-			writer.WriteString(fmt.Sprintf("%s\t%s\n", entry.Key, size))
+		if entry.Value.Size > 0 {
+			size := bytemath.ConvertToHumanReadable(float64(entry.Value.Size))
+			writer.WriteString(fmt.Sprintf("%s\t%s\t%d\n", entry.Value.Name, size, entry.Value.Count))
 			writer.Flush()
 		}
 	}
