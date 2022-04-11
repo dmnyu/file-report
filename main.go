@@ -24,16 +24,16 @@ var (
 
 func init() {
 	extensions = make(map[string]Extension)
-	flag.StringVar(&inputDir, "inputDir", "", "The Directory to walk")
-	flag.StringVar(&outputFile, "outputFile", "file-report.tsv", "/path/to/output/file")
+	flag.StringVar(&inputDir, "input-dir", "", "The Directory to walk")
+	flag.StringVar(&outputFile, "output-file", "file-report.tsv", "/path/to/output/file")
 	flag.BoolVar(&help, "help", false, "print this help screen")
 }
 
 func usage() {
 	fmt.Println("\nusage: file-report [options]")
 	fmt.Println("  options:")
-	fmt.Println("    --inputDir /path/to/the/directory/to/walk \"Required\"")
-	fmt.Printf("    --outputFile /path/to/report [optional, default: file-report.tsv]\n\n")
+	fmt.Println("    --input-dir /path/to/the/directory/to/walk \"Required\"")
+	fmt.Printf("    --output-file /path/to/report [optional, default: file-report.tsv]\n\n")
 }
 
 func main() {
@@ -94,7 +94,7 @@ func main() {
 	writer.WriteString("Extension\tSize\tCount\tSize In Bytes\n")
 	writer.Flush()
 
-	fmt.Printf("* Writing output tsv to%s\n", outputFile)
+	fmt.Printf("* Writing output tsv to %s\n", outputFile)
 	//create the output tsv
 	var totalSize int64
 	var totalCount int
@@ -109,10 +109,18 @@ func main() {
 		}
 	}
 
-	fmt.Printf("\nFile-Report complete\n")
+	//calculate human-readable size to total bytes
+	humanSize := bytemath.ConvertToHumanReadable(float64(totalSize))
+
+	//write totals to tsv file
+	writer.WriteString(fmt.Sprintf("totals\t%s\t%d\t%d\n", humanSize, totalCount, totalSize))
+	writer.Flush()
+
+	//print quick summary
+	fmt.Printf("* File-Report complete\n")
 	fmt.Printf("  # files found: %d\n", totalCount)
-	fmt.Printf("  total size of files %s\n", bytemath.ConvertToHumanReadable(float64(totalSize)))
-	fmt.Printf("\nExiting\n")
+	fmt.Printf("  total size of files %s\n", humanSize)
+	fmt.Printf("* Exiting\n")
 	os.Exit(0)
 }
 
