@@ -13,6 +13,8 @@ import (
 	"strings"
 )
 
+const version = "1.0.0"
+
 var (
 	extensions map[string]Extension
 	inputDir   string
@@ -78,15 +80,20 @@ func RootExists() error {
 }
 
 func main() {
+
+	fmt.Printf("NYUDL File Report Tool v%s\n", version)
+	fmt.Printf("* Parsing flags\n")
 	//parse the flags
 	flag.Parse()
 
+	fmt.Printf("* Checking that %s exists and is a directory\n", inputDir)
 	//check that the directory exists and is a directory
 	if err := RootExists(); err != nil {
 		panic(err)
 	}
 
 	//walk the directory
+	fmt.Printf("* Walking directory at %s\n", inputDir)
 	err := filepath.Walk(inputDir, func(path string, info fs.FileInfo, err error) error {
 		if info.IsDir() {
 			//fmt.Printf("Checking: %s\n", info.Name())
@@ -101,11 +108,11 @@ func main() {
 				extensions[extension] = tmpExt
 			}
 		}
-
 		return nil
 	})
 
 	//check for any errors during walk
+	fmt.Printf("* Checking for errors during walk\n")
 	if err != nil {
 		fmt.Println(err.Error())
 	}
@@ -113,6 +120,7 @@ func main() {
 	//sort by size of files
 	sortedExtensions := rankByWordCount(extensions)
 
+	fmt.Printf("* Creating output tsv file\n")
 	//create tsv file to write report to
 	of, _ := os.Create("file-report.tsv")
 	defer of.Close()
@@ -120,13 +128,24 @@ func main() {
 	writer.WriteString("Extension\tSize\tCount\tSize In Bytes\n")
 	writer.Flush()
 
+	fmt.Printf("* Writing output tsv\n")
 	//create the output tsv
+	var totalSize int64
+	var totalCount int
+
 	for _, entry := range sortedExtensions {
 		if entry.Value.Size > 0 {
+			totalSize += entry.Value.Size
+			totalCount += entry.Value.Count
 			size := bytemath.ConvertToHumanReadable(float64(entry.Value.Size))
 			writer.WriteString(fmt.Sprintf("%s\t%s\t%d\t%d\n", entry.Value.Name, size, entry.Value.Count, entry.Value.Size))
 			writer.Flush()
 		}
 	}
 
+	fmt.Printf("\nFile-Report complete\n")
+	fmt.Printf("  # files found: %d\n", totalCount)
+	fmt.Printf("  total size of files %s\n", bytemath.ConvertToHumanReadable(float64(totalSize)))
+	fmt.Printf("\nExiting\n")
+	os.Exit(0)
 }
