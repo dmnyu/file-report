@@ -19,25 +19,42 @@ var (
 	extensions map[string]Extension
 	inputDir   string
 	outputFile string
+	help       bool
 )
 
 func init() {
 	extensions = make(map[string]Extension)
 	flag.StringVar(&inputDir, "inputDir", "", "The Directory to walk")
 	flag.StringVar(&outputFile, "outputFile", "file-report.tsv", "/path/to/output/file")
+	flag.BoolVar(&help, "help", false, "print this help screen")
+}
+
+func usage() {
+	fmt.Println("\nusage: file-report [options]")
+	fmt.Println("  options:")
+	fmt.Println("    --inputDir /path/to/the/directory/to/walk \"Required\"")
+	fmt.Printf("    --outputFile /path/to/report [optional, default: file-report.tsv]\n\n")
 }
 
 func main() {
+
+	//print help message if help flag is set
+	if help == true {
+		usage()
+		os.Exit(0)
+	}
 
 	fmt.Printf("NYUDL File Report Tool v%s\n", version)
 	fmt.Printf("* Parsing flags\n")
 	//parse the flags
 	flag.Parse()
 
-	fmt.Printf("* Checking that %s exists and is a directory\n", inputDir)
+	fmt.Printf("* Checking that input directory '%s' exists and is a directory\n", inputDir)
 	//check that the directory exists and is a directory
 	if err := rootExists(); err != nil {
-		panic(err)
+		fmt.Printf("\n%s\n", err.Error())
+		usage()
+		os.Exit(1)
 	}
 
 	//walk the directory
@@ -63,6 +80,7 @@ func main() {
 	fmt.Printf("* Checking for errors during walk\n")
 	if err != nil {
 		fmt.Println(err.Error())
+		os.Exit(2)
 	}
 
 	//sort by size of files
@@ -76,7 +94,7 @@ func main() {
 	writer.WriteString("Extension\tSize\tCount\tSize In Bytes\n")
 	writer.Flush()
 
-	fmt.Printf("* Writing output tsv\n")
+	fmt.Printf("* Writing output tsv to%s\n", outputFile)
 	//create the output tsv
 	var totalSize int64
 	var totalCount int
@@ -118,18 +136,21 @@ func (p PairList) Less(i, j int) bool { return p[i].Value.Size < p[j].Value.Size
 func (p PairList) Swap(i, j int)      { p[i], p[j] = p[j], p[i] }
 
 func rootExists() error {
+	if inputDir == "" {
+		return fmt.Errorf("* [ERROR] inputDir is a required field")
+	}
 	fi, err := os.Stat(inputDir)
 	if err == nil {
 
 	} else if errors.Is(err, os.ErrNotExist) {
-		return fmt.Errorf("%s does not exist", inputDir)
+		return fmt.Errorf("* [ERROR] location: '%s' does not exist", inputDir)
 
 	} else {
 		return err
 	}
 
 	if fi.IsDir() != true {
-		return fmt.Errorf("input location is not a direcotory")
+		return fmt.Errorf("* [ERROR] locaton: '%s' is not a direcotory", inputDir)
 	}
 	return nil
 }
