@@ -1,4 +1,4 @@
-module file-report
+module github.com/dmnyu/file-report
 
 go 1.18
 
